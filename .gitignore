@@ -1,0 +1,12 @@
+build/
+obj/
+
+MyBot
+MyBot.exe
+Makefile
+
+*.hlt
+*.log
+*.obj
+*~
+*.nix
