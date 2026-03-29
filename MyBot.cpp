@@ -2,28 +2,24 @@
 #include "hlt/constants.hpp"
 #include "hlt/log.hpp"
 
-#include <random>
-#include <ctime>
+#include "BehaviorTree.h"
+#include "ShipAI.h"
 
 using namespace std;
 using namespace hlt;
 
 int main(int argc, char* argv[]) {
-    unsigned int rng_seed;
-    if (argc > 1) {
-        rng_seed = static_cast<unsigned int>(stoul(argv[1]));
-    } else {
-        rng_seed = static_cast<unsigned int>(time(nullptr));
-    }
-    mt19937 rng(rng_seed);
-
     Game game;
-    // At this point "game" variable is populated with initial map data.
-    // This is a good place to do computationally expensive start-up pre-processing.
-    // As soon as you call "ready" function below, the 2 second per turn timer will start.
-    game.ready("MyCppBot");
+    game.ready("TotoEnBot");
 
-    log::log("Successfully created bot! My Player ID is " + to_string(game.my_id) + ". Bot rng seed is " + to_string(rng_seed) + ".");
+    BehaviorTree::Selector<ShipAI::Payload> root(nullptr);
+
+    BehaviorTree::Sequencer<ShipAI::Payload> sequencer(&root);
+    ShipAI::IsNotFull isNotFull(&sequencer);
+    ShipAI::HaliteHere haliteHere(&sequencer);
+    ShipAI::CollectHalite collectHalite(&sequencer);
+
+    ShipAI::MoveRandom moveRandom(&root);
 
     for (;;) {
         game.update_frame();
@@ -34,12 +30,17 @@ int main(int argc, char* argv[]) {
 
         for (const auto& ship_iterator : me->ships) {
             shared_ptr<Ship> ship = ship_iterator.second;
+
+            /*
             if (game_map->at(ship)->halite < constants::MAX_HALITE / 10 || ship->is_full()) {
                 Direction random_direction = ALL_CARDINALS[rng() % 4];
                 command_queue.push_back(ship->move(random_direction));
             } else {
                 command_queue.push_back(ship->stay_still());
             }
+            */
+
+            root.Evaluate({ game, command_queue, ship });
         }
 
         if (
