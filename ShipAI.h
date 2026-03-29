@@ -25,7 +25,7 @@ public:
         : Leaf(parent)
     {
         this->evaluation = [&](Payload payload) {
-            if (payload.game.game_map->at(payload.ship)->halite > hlt::constants::MAX_HALITE / 10) {
+            if (payload.game.game_map->at(payload.ship)->halite > 50) {
                 return BehaviorTree::NodeState::Success;
             }
 
@@ -55,7 +55,35 @@ public:
         : Leaf(parent)
     {
         this->evaluation = [&](Payload payload) {
-            if (payload.ship->halite >= hlt::constants::MAX_HALITE / 2) {
+            unsigned int distanceToBase = payload.game.game_map->calculate_distance(payload.ship->position, payload.game.me->shipyard->position);
+            auto moves = payload.game.game_map->get_unsafe_moves(payload.ship->position, payload.game.me->shipyard->position);
+
+            unsigned int cost = 0;
+            hlt::Position currentPos = payload.ship->position;
+            for (hlt::Direction move : moves) {
+                switch (move) {
+                case hlt::Direction::NORTH:
+                    currentPos.y--;
+                    cost += payload.game.game_map->at(currentPos)->halite / 10;
+                    break;
+                case hlt::Direction::SOUTH:
+                    currentPos.y++;
+                    cost += payload.game.game_map->at(currentPos)->halite / 10;
+                    break;
+                case hlt::Direction::WEST:
+                    currentPos.x--;
+                    cost += payload.game.game_map->at(currentPos)->halite / 10;
+                    break;
+                case hlt::Direction::EAST:
+                    currentPos.x++;
+                    cost += payload.game.game_map->at(currentPos)->halite / 10;
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            if (payload.ship->halite >= cost + 800) {
                 return BehaviorTree::NodeState::Success;
             }
 
@@ -77,14 +105,55 @@ public:
     }
 };
 
-class MoveRandom : public BehaviorTree::Leaf<Payload> {
+class MoveToCoolHaliteSpot : public BehaviorTree::Leaf<Payload> {
 public:
-    MoveRandom(BehaviorTree::Node<Payload>* parent)
+    MoveToCoolHaliteSpot(BehaviorTree::Node<Payload>* parent)
         : Leaf(parent)
     {
         this->evaluation = [&](Payload payload) {
-            hlt::Direction random_direction = hlt::ALL_CARDINALS[rng() % 4];
-            payload.commands.push_back(payload.ship->move(random_direction));
+            
+            hlt::Position bestPositionSoFar;
+            unsigned int maxHaliteSoFar = 0;
+
+            hlt::Position pos = payload.ship->position;
+            for (unsigned int y = pos.y - 2; y < pos.y + 2; y++) {
+                for (unsigned int x = pos.x - 2; x < pos.x + 2; x++) {
+                    hlt::MapCell* cell = payload.game.game_map->at({ (int)x, (int)y });
+                    if (cell->halite > maxHaliteSoFar && !cell->is_occupied()) {
+                        bestPositionSoFar = cell->position;
+                        maxHaliteSoFar = cell->halite;
+                    }
+                }
+            }
+
+            hlt::Direction direction = payload.game.game_map->naive_navigate(payload.ship, bestPositionSoFar);
+
+            /*
+            unsigned int numTries = 0;
+            while (payload.game.game_map->at(payload.ship->position.directional_offset(direction))->is_occupied()) {
+                if (numTries >= 4) {
+                    direction = hlt::Direction::STILL;
+                    break;
+                }
+
+                if (direction == hlt::Direction::NORTH) {
+                    direction = hlt::Direction::EAST;
+                }
+                else if (direction == hlt::Direction::EAST) {
+                    direction = hlt::Direction::SOUTH;
+                }
+                else if (direction == hlt::Direction::SOUTH) {
+                    direction = hlt::Direction::WEST;
+                }
+                else if (direction == hlt::Direction::WEST) {
+                    direction = hlt::Direction::NORTH;
+                }
+
+                numTries++;
+            }
+            */
+            payload.commands.push_back(payload.ship->move(direction));
+
             return BehaviorTree::NodeState::Running;
         };
     }
@@ -114,7 +183,7 @@ BehaviorTree::Selector<Payload> GetBehaviorTree() {
     static HaliteHere haliteHere(&mining);
     static CollectHalite collectHalite(&mining);
 
-    static MoveRandom moveRandom(&root);
+    static MoveToCoolHaliteSpot moveToCoolHaliteSpot(&root);
 
     return root;
 }

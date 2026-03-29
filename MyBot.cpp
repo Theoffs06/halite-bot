@@ -9,6 +9,8 @@ using namespace std;
 using namespace hlt;
 
 int main(int argc, char* argv[]) {
+    bool firstStep = true;
+
     Game game;
     game.ready("TotoEnBot");
 
@@ -21,6 +23,10 @@ int main(int argc, char* argv[]) {
 
         vector<Command> command_queue;
 
+        if (!game_map->at(me->shipyard)->is_occupied() && me->halite >= constants::SHIP_COST + me->ships.size() * constants::SHIP_COST) {
+            command_queue.push_back(me->shipyard->spawn());
+        }
+
         for (const auto& ship_iterator : me->ships) {
             shared_ptr<Ship> ship = ship_iterator.second;
             shipAi.Evaluate({ game, command_queue, ship });
@@ -31,7 +37,7 @@ int main(int argc, char* argv[]) {
             me->halite >= constants::SHIP_COST &&
             !game_map->at(me->shipyard)->is_occupied())
         {
-            command_queue.push_back(me->shipyard->spawn());
+            // command_queue.push_back(me->shipyard->spawn());
         }
 
         if (!game.end_turn(command_queue)) {
