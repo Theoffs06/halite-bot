@@ -49,6 +49,34 @@ public:
     }
 };
 
+class ShouldDeposit : public BehaviorTree::Leaf<Payload> {
+public:
+    ShouldDeposit(BehaviorTree::Node<Payload>* parent)
+        : Leaf(parent)
+    {
+        this->evaluation = [&](Payload payload) {
+            if (payload.ship->halite >= hlt::constants::MAX_HALITE / 2) {
+                return BehaviorTree::NodeState::Success;
+            }
+
+            return BehaviorTree::NodeState::Failure;
+        };
+    }
+};
+
+class GoHome : public BehaviorTree::Leaf<Payload> {
+public:
+    GoHome(BehaviorTree::Node<Payload>* parent)
+        : Leaf(parent)
+    {
+        this->evaluation = [&](Payload payload) {
+            hlt::Direction direction = payload.game.game_map->naive_navigate(payload.ship, payload.game.me->shipyard->position);
+            payload.commands.push_back(payload.ship->move(direction));
+            return BehaviorTree::NodeState::Running;
+        };
+    }
+};
+
 class MoveRandom : public BehaviorTree::Leaf<Payload> {
 public:
     MoveRandom(BehaviorTree::Node<Payload>* parent)
@@ -73,5 +101,22 @@ public:
         };
     }
 };
+
+BehaviorTree::Selector<Payload> GetBehaviorTree() {
+    static BehaviorTree::Selector<ShipAI::Payload> root(nullptr);
+
+    static BehaviorTree::Sequencer<ShipAI::Payload> goHomeIfEnoughHalite(&root);
+    static ShouldDeposit shouldDeposit(&goHomeIfEnoughHalite);
+    static GoHome goHome(&goHomeIfEnoughHalite);
+
+    static BehaviorTree::Sequencer<ShipAI::Payload> mining(&root);
+    static IsNotFull isNotFull(&mining);
+    static HaliteHere haliteHere(&mining);
+    static CollectHalite collectHalite(&mining);
+
+    static MoveRandom moveRandom(&root);
+
+    return root;
+}
 
 }
