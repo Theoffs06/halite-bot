@@ -4,6 +4,7 @@
 
 #include "BehaviorTree.h"
 #include "ShipAI.h"
+#include "DropoffShipAi.h"
 
 using namespace std;
 using namespace hlt;
@@ -14,7 +15,9 @@ int main(int argc, char* argv[]) {
     Game game;
     game.ready("TotoEnBot");
 
-    BehaviorTree::Selector<ShipAI::Payload> shipAi = ShipAI::GetBehaviorTree();
+    BehaviorTree::Selector<Payload> shipAi = ShipAI::GetBehaviorTree();
+
+    shared_ptr<Ship> dropoffShip;
 
     for (;;) {
         game.update_frame();
@@ -23,10 +26,6 @@ int main(int argc, char* argv[]) {
 
         vector<Command> command_queue;
 
-        if (!game_map->at(me->shipyard)->is_occupied() && me->halite >= constants::SHIP_COST + me->ships.size() * constants::SHIP_COST) {
-            command_queue.push_back(me->shipyard->spawn());
-        }
-
         for (const auto& ship_iterator : me->ships) {
             shared_ptr<Ship> ship = ship_iterator.second;
             shipAi.Evaluate({ game, command_queue, ship });
@@ -34,10 +33,10 @@ int main(int argc, char* argv[]) {
 
         if (
             game.turn_number <= 200 &&
-            me->halite >= constants::SHIP_COST &&
+            me->halite >= constants::SHIP_COST * me->ships.size() &&
             !game_map->at(me->shipyard)->is_occupied())
         {
-            // command_queue.push_back(me->shipyard->spawn());
+            command_queue.push_back(me->shipyard->spawn());
         }
 
         if (!game.end_turn(command_queue)) {

@@ -4,20 +4,13 @@
 #include "hlt/constants.hpp"
 #include "hlt/log.hpp"
 
+#include "Util.h"
+#include "DropoffShipAi.h"
 #include "BehaviorTree.h"
 
 #include <random>
 
 namespace ShipAI {
-
-unsigned int rng_seed = static_cast<unsigned int>(time(nullptr));
-std::mt19937 rng(rng_seed);
-
-struct Payload {
-    hlt::Game& game;
-    std::vector<hlt::Command>& commands;
-    std::shared_ptr<hlt::Ship> ship;
-};
 
 class HaliteHere : public BehaviorTree::Leaf<Payload> {
 public:
@@ -59,6 +52,7 @@ public:
             auto moves = payload.game.game_map->get_unsafe_moves(payload.ship->position, payload.game.me->shipyard->position);
 
             unsigned int cost = 0;
+            /*
             hlt::Position currentPos = payload.ship->position;
             for (hlt::Direction move : moves) {
                 switch (move) {
@@ -82,6 +76,7 @@ public:
                     break;
                 }
             }
+            */
 
             if (payload.ship->halite >= cost + 800) {
                 return BehaviorTree::NodeState::Success;
@@ -92,13 +87,42 @@ public:
     }
 };
 
-class GoHome : public BehaviorTree::Leaf<Payload> {
+class GoDeposit : public BehaviorTree::Leaf<Payload> {
 public:
-    GoHome(BehaviorTree::Node<Payload>* parent)
+    GoDeposit(BehaviorTree::Node<Payload>* parent)
         : Leaf(parent)
     {
         this->evaluation = [&](Payload payload) {
-            hlt::Direction direction = payload.game.game_map->naive_navigate(payload.ship, payload.game.me->shipyard->position);
+            unsigned int bestDistanceSoFar = 1000000000;
+            hlt::Position closestDropoffSoFar;
+            for (auto dropoff : payload.game.me->dropoffs) {
+                unsigned int distance = payload.game.game_map->calculate_distance(dropoff.second->position, payload.ship->position);
+                if (distance < bestDistanceSoFar) {
+                    bestDistanceSoFar = distance;
+                    closestDropoffSoFar = dropoff.second->position;
+                }
+            }
+
+            if (payload.game.game_map->calculate_distance(payload.game.me->shipyard->position, payload.ship->position) < bestDistanceSoFar) {
+                closestDropoffSoFar = payload.game.me->shipyard->position;
+            }
+
+            hlt::Position shipPos = payload.ship->position;
+            hlt::Direction direction = payload.game.game_map->naive_navigate(payload.ship, closestDropoffSoFar);
+            if (direction == hlt::Direction::STILL) {
+                if (payload.game.game_map->at({ shipPos.x + 1, shipPos.y })->is_empty()) {
+                    direction = hlt::Direction::EAST;
+                }
+                else if (payload.game.game_map->at({ shipPos.x - 1, shipPos.y })->is_empty()) {
+                    direction = hlt::Direction::WEST;
+                }
+                else if (payload.game.game_map->at({ shipPos.x, shipPos.y + 1 })->is_empty()) {
+                    direction = hlt::Direction::SOUTH;
+                }
+                else if (payload.game.game_map->at({ shipPos.x, shipPos.y - 1 })->is_empty()) {
+                    direction = hlt::Direction::NORTH;
+                }
+            }
             payload.commands.push_back(payload.ship->move(direction));
             return BehaviorTree::NodeState::Running;
         };
@@ -116,10 +140,10 @@ public:
             unsigned int maxHaliteSoFar = 0;
 
             hlt::Position pos = payload.ship->position;
-            for (unsigned int y = pos.y - 2; y < pos.y + 2; y++) {
-                for (unsigned int x = pos.x - 2; x < pos.x + 2; x++) {
+            for (unsigned int y = pos.y - 8; y < pos.y + 5; y++) {
+                for (unsigned int x = pos.x - 5; x < pos.x + 5; x++) {
                     hlt::MapCell* cell = payload.game.game_map->at({ (int)x, (int)y });
-                    if (cell->halite > maxHaliteSoFar && !cell->is_occupied()) {
+                    if (cell->halite > maxHaliteSoFar && cell->is_empty()) {
                         bestPositionSoFar = cell->position;
                         maxHaliteSoFar = cell->halite;
                     }
@@ -127,31 +151,20 @@ public:
             }
 
             hlt::Direction direction = payload.game.game_map->naive_navigate(payload.ship, bestPositionSoFar);
-
-            /*
-            unsigned int numTries = 0;
-            while (payload.game.game_map->at(payload.ship->position.directional_offset(direction))->is_occupied()) {
-                if (numTries >= 4) {
-                    direction = hlt::Direction::STILL;
-                    break;
-                }
-
-                if (direction == hlt::Direction::NORTH) {
+            if (direction == hlt::Direction::STILL) {
+                if (payload.game.game_map->at({ bestPositionSoFar.x + 1, bestPositionSoFar.y })->is_empty()) {
                     direction = hlt::Direction::EAST;
                 }
-                else if (direction == hlt::Direction::EAST) {
-                    direction = hlt::Direction::SOUTH;
-                }
-                else if (direction == hlt::Direction::SOUTH) {
+                else if (payload.game.game_map->at({ bestPositionSoFar.x - 1, bestPositionSoFar.y })->is_empty()) {
                     direction = hlt::Direction::WEST;
                 }
-                else if (direction == hlt::Direction::WEST) {
+                else if (payload.game.game_map->at({ bestPositionSoFar.x, bestPositionSoFar.y + 1 })->is_empty()) {
+                    direction = hlt::Direction::SOUTH;
+                }
+                else if (payload.game.game_map->at({ bestPositionSoFar.x, bestPositionSoFar.y - 1 })->is_empty()) {
                     direction = hlt::Direction::NORTH;
                 }
-
-                numTries++;
             }
-            */
             payload.commands.push_back(payload.ship->move(direction));
 
             return BehaviorTree::NodeState::Running;
@@ -172,13 +185,15 @@ public:
 };
 
 BehaviorTree::Selector<Payload> GetBehaviorTree() {
-    static BehaviorTree::Selector<ShipAI::Payload> root(nullptr);
+    static BehaviorTree::Selector<Payload> root(nullptr);
 
-    static BehaviorTree::Sequencer<ShipAI::Payload> goHomeIfEnoughHalite(&root);
-    static ShouldDeposit shouldDeposit(&goHomeIfEnoughHalite);
-    static GoHome goHome(&goHomeIfEnoughHalite);
+    static BehaviorTree::Selector<Payload> dropoffShipAi = DropoffShipAi::GetBehaviorTree(&root);
 
-    static BehaviorTree::Sequencer<ShipAI::Payload> mining(&root);
+    static BehaviorTree::Sequencer<Payload> goDepositIfEnoughHalite(&root);
+    static ShouldDeposit shouldDeposit(&goDepositIfEnoughHalite);
+    static GoDeposit goDeposit(&goDepositIfEnoughHalite);
+
+    static BehaviorTree::Sequencer<Payload> mining(&root);
     static IsNotFull isNotFull(&mining);
     static HaliteHere haliteHere(&mining);
     static CollectHalite collectHalite(&mining);
