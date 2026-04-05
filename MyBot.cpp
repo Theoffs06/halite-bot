@@ -1,39 +1,30 @@
-#include "hlt/game.hpp"
-#include "hlt/constants.hpp"
-#include "hlt/log.hpp"
-
-#include "BehaviorTree.h"
-#include "ShipAI.h"
-#include "DropoffShipAi.h"
-
-using namespace std;
-using namespace hlt;
+#include "include/ship_ai.hpp"
+#include "include/dropoff_ship_ai.hpp"
 
 int main(int argc, char* argv[]) {
     bool firstStep = true;
 
-    Game game;
+    hlt::Game game;
     game.ready("TotoEnBot");
 
     BehaviorTree::Selector<Payload> shipAi = ShipAI::GetBehaviorTree();
-
-    shared_ptr<Ship> dropoffShip;
+    std::shared_ptr<hlt::Ship> dropoffShip;
 
     for (;;) {
         game.update_frame();
-        shared_ptr<Player> me = game.me;
-        unique_ptr<GameMap>& game_map = game.game_map;
+        std::shared_ptr<hlt::Player> me = game.me;
+        std::unique_ptr<hlt::GameMap>& game_map = game.game_map;
 
-        vector<Command> command_queue;
+        std::vector<hlt::Command> command_queue;
 
         for (const auto& ship_iterator : me->ships) {
-            shared_ptr<Ship> ship = ship_iterator.second;
+	        std::shared_ptr<hlt::Ship> ship = ship_iterator.second;
             shipAi.Evaluate({ game, command_queue, ship });
         }
 
         if (
             game.turn_number <= 200 &&
-            me->halite >= constants::SHIP_COST * me->ships.size() &&
+            me->halite >= hlt::constants::SHIP_COST * me->ships.size() &&
             !game_map->at(me->shipyard)->is_occupied())
         {
             command_queue.push_back(me->shipyard->spawn());

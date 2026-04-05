@@ -1,7 +1,9 @@
 #pragma once
-#include "hlt/log.hpp"
+
 #include <vector>
 #include <functional>
+
+#include "hlt/log.hpp"
 
 namespace BehaviorTree {
 

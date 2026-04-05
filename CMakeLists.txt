@@ -10,11 +10,17 @@ add_executable(${EXECUTABLE_NAME})
 target_compile_features(${EXECUTABLE_NAME} PRIVATE cxx_std_20)
 
 target_sources(${EXECUTABLE_NAME} PRIVATE 
+	include/util.hpp
+	include/behavior_tree.hpp
+	include/dropoff_ship_ai.hpp
+	include/ship_ai.hpp
 	MyBot.cpp
 )
 
 target_include_directories(${EXECUTABLE_NAME} PRIVATE 
 	${CMAKE_CURRENT_SOURCE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/include
+	${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 add_library(${LIB_NAME} STATIC)

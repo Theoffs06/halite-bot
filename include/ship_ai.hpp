@@ -1,14 +1,10 @@
 #pragma once
 
-#include "hlt/game.hpp"
-#include "hlt/constants.hpp"
-#include "hlt/log.hpp"
-
-#include "Util.h"
-#include "DropoffShipAi.h"
-#include "BehaviorTree.h"
-
 #include <random>
+
+#include "include/util.hpp"
+#include "include/dropoff_ship_ai.hpp"
+#include "include/ship_ai.hpp"
 
 namespace ShipAI {
 
