@@ -159,3 +159,30 @@ ShipAI::CollectHalite::CollectHalite(BehaviorTree::Node<Payload>* parent): Leaf(
 		return BehaviorTree::NodeState::Running;
 	};
 }
+
+// --- Behavior Tree Construction ---
+
+BehaviorTree::Selector<Payload> ShipAI::GetBehaviorTree()
+{
+	// Root node: selects between mining or depositing
+	static BehaviorTree::Selector<Payload> root(nullptr);
+
+	// Subtree for dropoff ship AI (decides whether to transform into a dropoff point)
+	static BehaviorTree::Selector<Payload> dropoffShipAi = DropoffShipAi::GetBehaviorTree(&root);
+
+	// Subtree: go deposit halite if the ship has enough
+	static BehaviorTree::Sequencer<Payload> goDepositIfEnoughHalite(&root);
+	static ShouldDeposit shouldDeposit(&goDepositIfEnoughHalite);
+	static GoDeposit goDeposit(&goDepositIfEnoughHalite);
+
+	// Subtree: mining behavior (collecting halite)
+	static BehaviorTree::Sequencer<Payload> mining(&root);
+	static IsNotFull isNotFull(&mining);
+	static HaliteHere haliteHere(&mining);
+	static CollectHalite collectHalite(&mining);
+
+	// Leaf: move to a cool halite spot if no halite is present
+	static MoveToCoolHaliteSpot moveToCoolHaliteSpot(&root);
+
+	return root;
+}

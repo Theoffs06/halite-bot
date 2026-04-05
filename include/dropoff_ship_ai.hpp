@@ -28,18 +28,5 @@ namespace DropoffShipAi {
 
 	// Builds and returns the behavior tree for a dropoff ship AI.
 	// The tree decides whether to transform the ship into a dropoff point.
-	inline BehaviorTree::Selector<Payload> GetBehaviorTree(BehaviorTree::Node<Payload>* parent = nullptr) {
-		// Root node: selects between actions
-		static BehaviorTree::Selector<Payload> root(parent);
-
-		// Subtree: decide whether to transform into a dropoff point
-	    static BehaviorTree::Sequencer<Payload> shouldTransformIntoDropoff(&root);
-	    static IsOnBigHaliteSpot isOnBigHaliteSpot(&shouldTransformIntoDropoff);
-	    static TransformIntoDropoff transformIntoDropoff(&shouldTransformIntoDropoff);
-		
-		// (Optional) Subtree: move to a big halite spot
-		// static MoveToBigHaliteSpot moveToBigHaliteSpot(&root);
-	    
-		return root;
-	}
+	BehaviorTree::Selector<Payload> GetBehaviorTree(BehaviorTree::Node<Payload>* parent = nullptr);
 } // namespace DropoffShipAi

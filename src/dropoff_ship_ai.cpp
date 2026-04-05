@@ -78,3 +78,21 @@ DropoffShipAi::IsOnBigHaliteSpot::IsOnBigHaliteSpot(BehaviorTree::Node<Payload>*
 		return BehaviorTree::NodeState::Failure;
 	};
 }
+
+// --- Behavior Tree Construction ---
+
+BehaviorTree::Selector<Payload> DropoffShipAi::GetBehaviorTree(BehaviorTree::Node<Payload>* parent)
+{
+	// Root node: selects between actions
+	static BehaviorTree::Selector<Payload> root(parent);
+
+	// Subtree: decide whether to transform into a dropoff point
+	static BehaviorTree::Sequencer<Payload> shouldTransformIntoDropoff(&root);
+	static IsOnBigHaliteSpot isOnBigHaliteSpot(&shouldTransformIntoDropoff);
+	static TransformIntoDropoff transformIntoDropoff(&shouldTransformIntoDropoff);
+		
+	// (Optional) Subtree: move to a big halite spot
+	// static MoveToBigHaliteSpot moveToBigHaliteSpot(&root);
+	    
+	return root;
+}
