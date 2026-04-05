@@ -3,7 +3,6 @@
 
 int main(int argc, char* argv[]) {
 	hlt::Game game;
-
     game.ready("PoissonSteve");
 
     BehaviorTree::Selector<Payload> shipAi = ShipAI::GetBehaviorTree();
