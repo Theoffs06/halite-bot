@@ -12,10 +12,8 @@ target_compile_features(${EXECUTABLE_NAME} PRIVATE cxx_std_20)
 target_sources(${EXECUTABLE_NAME} PRIVATE 
 	include/util.hpp
 	include/behavior_tree.hpp
-	include/dropoff_ship_ai.hpp
-	include/ship_ai.hpp
-	src/dropoff_ship_ai.cpp
-	src/ship_ai.cpp
+	include/ship_ai_v2.hpp
+	src/ship_ai_v2.cpp
 	MyBot.cpp
 )
 

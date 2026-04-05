@@ -1,12 +1,10 @@
-#include "include/ship_ai.hpp"
-#include "include/dropoff_ship_ai.hpp"
+#include "include/ship_ai_v2.hpp"
 
 int main(int argc, char* argv[]) {
 	hlt::Game game;
     game.ready("PoissonSteve");
 
-    BehaviorTree::Selector<Payload> shipAi = ShipAI::GetBehaviorTree();
-    std::shared_ptr<hlt::Ship> dropoffShip;
+    BehaviorTree::Selector<Payload> shipAi = ShipAIV2::GetBehaviorTree();
 
     while (true) {
         game.update_frame();
@@ -22,10 +20,10 @@ int main(int argc, char* argv[]) {
         }
 
         if (
-            game.turn_number <= 200 &&
-            me->halite >= hlt::constants::SHIP_COST * me->ships.size() &&
-            !gameMap->at(me->shipyard)->is_occupied())
-        {
+            me->halite >= hlt::constants::SHIP_COST
+            && me->ships.size() < 13 
+            && !gameMap->at(me->shipyard)->is_occupied()
+            ) {
             commandQueue.push_back(me->shipyard->spawn());
         }
 
