@@ -14,6 +14,8 @@ target_sources(${EXECUTABLE_NAME} PRIVATE
 	include/behavior_tree.hpp
 	include/dropoff_ship_ai.hpp
 	include/ship_ai.hpp
+	src/dropoff_ship_ai.cpp
+	src/ship_ai.cpp
 	MyBot.cpp
 )
 
