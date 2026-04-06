@@ -11,11 +11,14 @@ target_compile_features(${EXECUTABLE_NAME} PRIVATE cxx_std_20)
 
 target_sources(${EXECUTABLE_NAME} PRIVATE 
 	include/util.hpp
+	include/weighted_picker.hpp
 	include/behavior_tree.hpp
+	include/unit_manager.hpp
 	include/spot_manager.hpp
 	include/move_manager.hpp
 	include/shipyard_ai.hpp
 	include/ship_ai.hpp
+	src/unit_manager.cpp
 	src/spot_manager.cpp
 	src/move_manager.cpp
 	src/shipyard_ai.cpp

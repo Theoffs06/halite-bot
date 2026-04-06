@@ -2,7 +2,7 @@
 
 // --- Behavior Tree Construction ---
 
-BehaviorTree::Selector<ShipPayload> ShipAI::GetBehaviorTree() {
+BehaviorTree::Selector<ShipPayload> ShipAI::GetMinerBehaviorTree() {
 	// Root node: selects between mining or depositing
 	static BehaviorTree::Selector<ShipPayload> root(nullptr);
 
@@ -21,6 +21,26 @@ BehaviorTree::Selector<ShipPayload> ShipAI::GetBehaviorTree() {
 	static IsNotFull isNotFull(&miningSubtree);
 	static HaliteHere haliteHere(&miningSubtree);
 	static CollectHalite collectHalite(&miningSubtree);
+
+	// Leaf: move to a cool halite spot
+	static MoveToBestHaliteSpot moveToBestHalite(&root);
+
+	return root;
+}
+
+BehaviorTree::Selector<ShipPayload> ShipAI::GetExplorerBehaviorTree() {
+	// Root node: selects between mining or depositing
+	static BehaviorTree::Selector<ShipPayload> root(nullptr);
+	
+	// Subtree: depositing end game behavior (going back to the shipyard to drop off halite when the game is about to end)
+	static BehaviorTree::Sequencer<ShipPayload> depositingEndGameSubtree(&root);
+	static ShouldDeposit shouldDepositEndGame(&depositingEndGameSubtree);
+	static GoDeposit goDepositEndGame(&depositingEndGameSubtree);
+
+	// Subtree: depositing behavior (going back to the shipyard to drop off halite)
+	static BehaviorTree::Sequencer<ShipPayload> depositingSubtree(&root);
+	static ShouldDeposit shouldDeposit(&depositingSubtree);
+	static GoDeposit goDeposit(&depositingSubtree);
 
 	// Leaf: move to a cool halite spot
 	static MoveToBestHaliteSpot moveToBestHalite(&root);

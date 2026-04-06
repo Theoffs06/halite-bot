@@ -5,7 +5,8 @@
 namespace ShipAI {
 	// --- Behavior Tree Construction ---
 
-	BehaviorTree::Selector<ShipPayload> GetBehaviorTree();
+	BehaviorTree::Selector<ShipPayload> GetMinerBehaviorTree();
+	BehaviorTree::Selector<ShipPayload> GetExplorerBehaviorTree();
 
 	// --- Behavior Tree Nodes ---
 

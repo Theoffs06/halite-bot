@@ -8,6 +8,10 @@
 #include "include/spot_manager.hpp"
 #include "include/move_manager.hpp"
 
+// -- UNIT MANAGER --
+constexpr int MINER_PERCENTAGE = 70;
+constexpr int EXPLORER_PERCENTAGE = 10;
+
 // -- SHIP --
 
 // Constants for the ship behavior tree nodes.

@@ -1,7 +1,14 @@
+#include <random>
+
+#include "unit_manager.hpp"
 #include "include/shipyard_ai.hpp"
 #include "include/ship_ai.hpp"
 
 int main(int argc, char* argv[]) {
+    unsigned int rngSeed;
+    if (argc > 1) rngSeed = (unsigned int) std::stoul(argv[1]);
+    else rngSeed = (unsigned int) time(nullptr);
+
 	hlt::Game game;
     game.ready("PoissonSteve");
 
@@ -9,8 +16,10 @@ int main(int argc, char* argv[]) {
 	BehaviorTree::Selector<ShipyardPayload> shipyardAi = ShipyardAI::GetBehaviorTree();
 
 	// Get the behavior tree for ship AI.
-    BehaviorTree::Selector<ShipPayload> shipAi = ShipAI::GetBehaviorTree();
+    BehaviorTree::Selector<ShipPayload> minerAi = ShipAI::GetMinerBehaviorTree();
+	BehaviorTree::Selector<ShipPayload> explorerAi = ShipAI::GetExplorerBehaviorTree();
 
+	UnitManager unitManager(rngSeed);
     SpotManager spotManager;
     MoveManager moveManager;
 
@@ -29,13 +38,17 @@ int main(int argc, char* argv[]) {
 		// Evaluate the behavior tree for each ship and populate the command queue.
         for (const auto& shipIterator : me->ships) {
 	        const std::shared_ptr<hlt::Ship> ship = shipIterator.second;
-        	shipAi.Evaluate({ 
-                game, 
-        		commandQueue, 
-        		ship,
-                spotManager,
-				moveManager,
-        	});
+			const ShipPayload payload{ game, commandQueue, ship, spotManager, moveManager };
+
+            unitManager.TryAddUnit(ship->id);
+	        switch (unitManager.GetUnitType(ship->id)) {
+	        case UnitType::Miner:
+				minerAi.Evaluate(payload);
+		        break;
+	        case UnitType::Explorer:
+				explorerAi.Evaluate(payload);
+		        break;
+	        }
         }
 
 		// Evaluate the behavior tree for the shipyard and populate the command queue.
