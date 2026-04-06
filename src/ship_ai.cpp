@@ -52,7 +52,10 @@ ShipAI::EndShouldDeposit::EndShouldDeposit(BehaviorTree::Node<ShipPayload>* pare
  */
 ShipAI::ShouldDeposit::ShouldDeposit(BehaviorTree::Node<ShipPayload>* parent) : Leaf(parent) {
 	this->evaluation = [&](const ShipPayload& payload) {
-		if (payload.ship->halite >= GO_HOME_HALITE) {
+		std::shared_ptr<hlt::Ship> ship = payload.ship;
+
+		const unsigned int cost = payload.moveManager.GetCostPath(payload.game.game_map, ship, payload.game.me->shipyard->position);
+		if (payload.ship->halite >= cost + GO_HOME_HALITE) {
 			return BehaviorTree::NodeState::Success;
 		}
 
