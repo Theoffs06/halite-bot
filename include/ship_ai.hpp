@@ -43,8 +43,4 @@ namespace ShipAI {
 	public:
 		MoveToBestHaliteSpot(BehaviorTree::Node<ShipPayload>* parent);
 	};
-
-	// --- Utility Functions ---
-
-	hlt::Direction UnblockShip(const std::unique_ptr<hlt::GameMap>& gameMap, const hlt::Direction direction, const hlt::Position& shipPos);
 } // namespace ShipAI

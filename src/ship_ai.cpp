@@ -71,10 +71,9 @@ ShipAI::GoDeposit::GoDeposit(BehaviorTree::Node<ShipPayload>* parent) : Leaf(par
 		std::shared_ptr<hlt::Ship> ship = payload.ship;
 
 		hlt::Direction direction = payload.moveManager.GetNextDirection(gameMap, ship, payload.game.me->shipyard->position);
-		direction = UnblockShip(gameMap, direction, ship->position);
 
-		// Check if the ship has enough halite to move. If not, stay still and mark the cell as unsafe.
-		if (ship->halite < gameMap->at(ship)->halite * (1.0 / hlt::constants::MOVE_COST_RATIO)) {
+		const bool isShipHaliteTooLowToMoveEfficiently = ship->halite < gameMap->at(ship)->halite * (1.0 / hlt::constants::MOVE_COST_RATIO);
+		if (isShipHaliteTooLowToMoveEfficiently || direction == hlt::Direction::STILL) {
 			gameMap->at(ship)->mark_unsafe(ship);
 			payload.commands.push_back(ship->stay_still());
 			return BehaviorTree::NodeState::Running;
@@ -147,10 +146,9 @@ ShipAI::MoveToBestHaliteSpot::MoveToBestHaliteSpot(BehaviorTree::Node<ShipPayloa
 
 		// Get the direction to navigate towards the best halite spot.
 		hlt::Direction direction = payload.moveManager.GetNextDirection(gameMap, ship, bestSpotPosition);
-		direction = UnblockShip(gameMap, direction, ship->position);
 
-		// Check if the ship has enough halite to move. If not, stay still and mark the cell as unsafe.
-		if (ship->halite < gameMap->at(ship)->halite * (1.0 / hlt::constants::MOVE_COST_RATIO)) {
+		const bool isShipHaliteTooLowToMoveEfficiently = ship->halite < gameMap->at(ship)->halite * (1.0 / hlt::constants::MOVE_COST_RATIO);
+		if (isShipHaliteTooLowToMoveEfficiently || direction == hlt::Direction::STILL) {
 			gameMap->at(ship)->mark_unsafe(ship);
 			payload.commands.push_back(ship->stay_still());
 			return BehaviorTree::NodeState::Running;
@@ -163,32 +161,4 @@ ShipAI::MoveToBestHaliteSpot::MoveToBestHaliteSpot(BehaviorTree::Node<ShipPayloa
 		payload.commands.push_back(ship->move(direction));
 		return BehaviorTree::NodeState::Running;
 	};
-}
-
-// --- Utility Functions ---
-
-/* 
- * This function checks if the ship is blocked in the given direction and, 
- * if so, tries to find an alternative direction to move towards the goal. 
- */
-hlt::Direction ShipAI::UnblockShip(const std::unique_ptr<hlt::GameMap>& gameMap, const hlt::Direction direction, const hlt::Position& shipPos){
-	if (direction == hlt::Direction::STILL) {
-		if (gameMap->at({ shipPos.x + 1, shipPos.y })->is_empty()) {
-			return hlt::Direction::EAST;
-		}
-
-		if (gameMap->at({ shipPos.x - 1, shipPos.y })->is_empty()) {
-			return hlt::Direction::WEST;
-		}
-
-		if (gameMap->at({ shipPos.x, shipPos.y + 1 })->is_empty()) {
-			return hlt::Direction::SOUTH;
-		}
-
-		if (gameMap->at({ shipPos.x, shipPos.y - 1 })->is_empty()) {
-			return hlt::Direction::NORTH;
-		}
-	}
-
-	return direction;
 }
