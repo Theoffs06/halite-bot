@@ -1,6 +1,7 @@
 #pragma once
 
 #include "include/util.hpp"
+#include "include/dropoff_ship_ai.hpp"
 
 namespace ShipAI {
 	// --- Behavior Tree Construction ---

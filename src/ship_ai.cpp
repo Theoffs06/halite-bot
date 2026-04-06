@@ -6,6 +6,9 @@ BehaviorTree::Selector<ShipPayload> ShipAI::GetMinerBehaviorTree() {
 	// Root node: selects between mining or depositing
 	static BehaviorTree::Selector<ShipPayload> root(nullptr);
 
+	// SubBehavior: dropoff ship behavior (going back to the shipyard to drop off halite when the game is about to end or when on a good spot to drop off)
+	static BehaviorTree::Selector<ShipPayload> dropoffShipAi = DropoffShipAi::GetBehaviorTree(&root);
+
 	// Subtree: depositing end game behavior (going back to the shipyard to drop off halite when the game is about to end)
 	static BehaviorTree::Sequencer<ShipPayload> depositingEndGameSubtree(&root);
 	static ShouldDeposit shouldDepositEndGame(&depositingEndGameSubtree);
@@ -31,7 +34,10 @@ BehaviorTree::Selector<ShipPayload> ShipAI::GetMinerBehaviorTree() {
 BehaviorTree::Selector<ShipPayload> ShipAI::GetExplorerBehaviorTree() {
 	// Root node: selects between mining or depositing
 	static BehaviorTree::Selector<ShipPayload> root(nullptr);
-	
+
+	// SubBehavior: dropoff ship behavior (going back to the shipyard to drop off halite when the game is about to end or when on a good spot to drop off)
+	static BehaviorTree::Selector<ShipPayload> dropoffShipAi = DropoffShipAi::GetBehaviorTree(&root);
+
 	// Subtree: depositing end game behavior (going back to the shipyard to drop off halite when the game is about to end)
 	static BehaviorTree::Sequencer<ShipPayload> depositingEndGameSubtree(&root);
 	static ShouldDeposit shouldDepositEndGame(&depositingEndGameSubtree);
@@ -50,7 +56,7 @@ BehaviorTree::Selector<ShipPayload> ShipAI::GetExplorerBehaviorTree() {
 
 // --- Behavior Tree Nodes ---
 
-// -- EndShouldDeposit Node ---
+// --- EndShouldDeposit Node ---
 /* 
  * This node checks if the game is in the endgame phase and if the ship has enough halite to justify returning to the shipyard to deposit. 
  * If both conditions are met, it returns Success; otherwise, it returns Failure.
@@ -72,9 +78,30 @@ ShipAI::EndShouldDeposit::EndShouldDeposit(BehaviorTree::Node<ShipPayload>* pare
  */
 ShipAI::ShouldDeposit::ShouldDeposit(BehaviorTree::Node<ShipPayload>* parent) : Leaf(parent) {
 	this->evaluation = [&](const ShipPayload& payload) {
+		const std::unique_ptr<hlt::GameMap>& gameMap = payload.game.game_map;
+		std::shared_ptr<hlt::Shipyard> shipyard = payload.game.me->shipyard;
 		std::shared_ptr<hlt::Ship> ship = payload.ship;
 
-		const unsigned int cost = payload.moveManager.GetCostPath(payload.game.game_map, ship, payload.game.me->shipyard->position);
+		// Find the closest dropoff point (shipyard or existing dropoffs).
+		unsigned int bestDistanceSoFar = 1000000000;
+		hlt::Position closestDropoffSoFar;
+
+		// Check existing dropoffs.
+		for (const auto& dropoff : payload.game.me->dropoffs) {
+			unsigned int distance = gameMap->calculate_distance(dropoff.second->position, ship->position);
+
+			if (distance < bestDistanceSoFar) {
+				bestDistanceSoFar = distance;
+				closestDropoffSoFar = dropoff.second->position;
+			}
+		}
+
+		// Compare with shipyard distance.
+		if (gameMap->calculate_distance(shipyard->position, ship->position) < bestDistanceSoFar) {
+			closestDropoffSoFar = shipyard->position;
+		}
+
+		const unsigned int cost = payload.moveManager.GetCostPath(gameMap, ship, closestDropoffSoFar);
 		if (payload.ship->halite >= cost + GO_HOME_HALITE) {
 			return BehaviorTree::NodeState::Success;
 		}
@@ -91,9 +118,29 @@ ShipAI::ShouldDeposit::ShouldDeposit(BehaviorTree::Node<ShipPayload>* parent) : 
 ShipAI::GoDeposit::GoDeposit(BehaviorTree::Node<ShipPayload>* parent) : Leaf(parent) {
 	this->evaluation = [&](const ShipPayload& payload) {
 		const std::unique_ptr<hlt::GameMap>& gameMap = payload.game.game_map;
+		std::shared_ptr<hlt::Shipyard> shipyard = payload.game.me->shipyard;
 		std::shared_ptr<hlt::Ship> ship = payload.ship;
 
-		hlt::Direction direction = payload.moveManager.GetNextDirection(gameMap, ship, payload.game.me->shipyard->position);
+		// Find the closest dropoff point (shipyard or existing dropoffs).
+		unsigned int bestDistanceSoFar = 1000000000;
+		hlt::Position closestDropoffSoFar;
+
+		// Check existing dropoffs.
+		for (const auto& dropoff : payload.game.me->dropoffs) {
+			unsigned int distance = gameMap->calculate_distance(dropoff.second->position, ship->position);
+
+			if (distance < bestDistanceSoFar) {
+				bestDistanceSoFar = distance;
+				closestDropoffSoFar = dropoff.second->position;
+			}
+		}
+
+		// Compare with shipyard distance.
+		if (gameMap->calculate_distance(shipyard->position, ship->position) < bestDistanceSoFar) {
+			closestDropoffSoFar = shipyard->position;
+		}
+
+		hlt::Direction direction = payload.moveManager.GetNextDirection(gameMap, ship, closestDropoffSoFar);
 
 		const bool isShipHaliteTooLowToMoveEfficiently = ship->halite < gameMap->at(ship)->halite * (1.0 / hlt::constants::MOVE_COST_RATIO);
 		if (isShipHaliteTooLowToMoveEfficiently || direction == hlt::Direction::STILL) {

@@ -21,6 +21,7 @@ constexpr int END_GO_HOME_HALITE = 100;
 constexpr int GO_HOME_HALITE = 500;
 constexpr double TARGETED_PENALTY = 900.0;
 constexpr double DISTANCE_PENALTY = 1.5;
+constexpr int INTERESTING_HALITE_DROPOFF = 400;
 
 // Contains data passed to the ship behavior tree nodes.
 struct ShipPayload {

@@ -17,12 +17,14 @@ target_sources(${EXECUTABLE_NAME} PRIVATE
 	include/spot_manager.hpp
 	include/move_manager.hpp
 	include/shipyard_ai.hpp
+	include/dropoff_ship_ai.hpp
 	include/ship_ai.hpp
 	src/unit_manager.cpp
 	src/spot_manager.cpp
 	src/move_manager.cpp
 	src/shipyard_ai.cpp
 	src/ship_ai.cpp
+	src/dropoff_ship_ai.cpp
 	MyBot.cpp
 )
 
