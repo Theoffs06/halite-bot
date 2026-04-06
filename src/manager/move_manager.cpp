@@ -1,5 +1,6 @@
-#include "include/move_manager.hpp"
+#include "include/manager//move_manager.hpp"
 
+// Returns the next direction for the ship to move towards the destination using A* pathfinding.
 hlt::Direction MoveManager::GetNextDirection(const std::unique_ptr<hlt::GameMap>& gameMap, std::shared_ptr<hlt::Ship>& ship, const hlt::Position& destination) {
 	const int width = gameMap->width;
 	const int height = gameMap->height;
@@ -16,10 +17,12 @@ hlt::Direction MoveManager::GetNextDirection(const std::unique_ptr<hlt::GameMap>
 	const int startIndex = GetIndexFromPosition(startPos, width);
 	const int destinationIndex = GetIndexFromPosition(destPos, width);
 
+	// Run A* pathfinding to find the path from the ship's current position to the destination.
 	if (!RunAStar(gameMap, startPos, destPos, state)) {
 		return hlt::Direction::STILL;
 	}
 
+	// Backtrack from the destination to find the first step towards the destination.
 	const int firstStepIdx = GetFirstStepIndex(state, startIndex, destinationIndex);
 	if (firstStepIdx == -1) return hlt::Direction::STILL;
 
@@ -28,6 +31,7 @@ hlt::Direction MoveManager::GetNextDirection(const std::unique_ptr<hlt::GameMap>
 	return GetComputeDirection(startPos, stepPos, { width, height });
 }
 
+// Returns the total cost of the path from the ship's current position to the destination using A* pathfinding.
 int MoveManager::GetCostPath(const std::unique_ptr<hlt::GameMap>& gameMap, std::shared_ptr<hlt::Ship>& ship, const hlt::Position& destination) {
 	const int width = gameMap->width;
 	const int height = gameMap->height;
@@ -41,6 +45,7 @@ int MoveManager::GetCostPath(const std::unique_ptr<hlt::GameMap>& gameMap, std::
 	state.parent.resize(width * height, -1);
 	state.closed.resize(width * height, false);
 
+	// Run A* pathfinding to find the path from the ship's current position to the destination.
 	if (!RunAStar(gameMap, startPos, destPos, state)) {
 		return 0;
 	}
@@ -48,6 +53,7 @@ int MoveManager::GetCostPath(const std::unique_ptr<hlt::GameMap>& gameMap, std::
 	const int startIndex = GetIndexFromPosition(startPos, width);
 	const int destinationIndex = GetIndexFromPosition(destPos, width);
 
+	// Backtrack from the destination to find the path and calculate the total cost.
 	std::vector<int> path;
 	int node = destinationIndex;
 	while (node != -1) {
@@ -56,9 +62,11 @@ int MoveManager::GetCostPath(const std::unique_ptr<hlt::GameMap>& gameMap, std::
 		node = state.parent[node];
 	}
 
+	// If the path is empty or doesn't end at the start index, return 0 as an invalid path.
 	if (path.empty() || path.back() != startIndex) return 0;
 	std::ranges::reverse(path);
 
+	// Calculate the total cost of the path based on the halite values of the cells along the path.
 	int totalCost = 0;
 	for (size_t i = 0; i + 1 < path.size(); ++i) {
 		hlt::Position currentPos = GetPositionFromIndex(path[i], width);
@@ -73,16 +81,19 @@ int MoveManager::GetCostPath(const std::unique_ptr<hlt::GameMap>& gameMap, std::
 	return totalCost;
 }
 
+// Runs the A* pathfinding algorithm and updates the PathState with the results.
 bool MoveManager::RunAStar(const std::unique_ptr<hlt::GameMap>& gameMap, const hlt::Position& startPos, const hlt::Position& destPos, PathState& state) {
 	const int width = gameMap->width;
 
 	const int startIndex = GetIndexFromPosition(startPos, width);
 	const int destinationIndex = GetIndexFromPosition(destPos, width);
 
+	// Initialize the A* algorithm state.
 	state.gScore[startIndex] = 0;
 	const int startHeuristic = gameMap->calculate_distance(startPos, destPos);
 	state.open.emplace(startHeuristic, startIndex);
 
+	// A* pathfinding algorithm implementation.
 	while (!state.open.empty()) {
         const auto [currentF, currentIdx] = state.open.top();
 		state.open.pop();
@@ -116,6 +127,8 @@ bool MoveManager::RunAStar(const std::unique_ptr<hlt::GameMap>& gameMap, const h
 
 	return false;
 }
+
+// --- Helper functions for the A* pathfinding algorithm ---
 
 int MoveManager::GetFirstStepIndex(const PathState& state, int startIdx, int destIdx) {
 	int node = destIdx;

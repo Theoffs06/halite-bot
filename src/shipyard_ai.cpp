@@ -19,11 +19,11 @@ BehaviorTree::Selector<ShipyardPayload> ShipyardAI::GetBehaviorTree() {
 // --- CanSpawn Node ---
 // This node checks if the shipyard can spawn a new ship and, if so, adds the spawn command to the command queue.
 ShipyardAI::CanSpawn::CanSpawn(BehaviorTree::Node<ShipyardPayload>* parent) : Leaf(parent) {
-	this->evaluation = [&](const ShipyardPayload& payload) {
+	this->m_evaluation = [&](const ShipyardPayload& payload) {
 		const auto& game = payload.game;
 		const auto& shipyard = payload.shipyard;
 
-		const bool hasEnoughHaliteForNewShip = game.me->halite >= hlt::constants::SHIP_COST + BONUS_COST_SHIP;
+		const bool hasEnoughHaliteForNewShip = game.me->halite >= hlt::constants::SHIP_COST + SHIP_COST_OFFSET;
 		const bool hasReachedMaxShips = game.me->ships.size() < MAX_SHIP;
 		const bool isShipyardFree = !game.game_map->at(shipyard)->is_occupied();
 
@@ -38,7 +38,7 @@ ShipyardAI::CanSpawn::CanSpawn(BehaviorTree::Node<ShipyardPayload>* parent) : Le
 // --- SpawnShip Node ---
 // This node spawns a new ship from the shipyard and adds the spawn command to the command queue.
 ShipyardAI::SpawnShip::SpawnShip(BehaviorTree::Node<ShipyardPayload>* parent) : Leaf(parent) {
-	this->evaluation = [&](const ShipyardPayload& payload) {
+	this->m_evaluation = [&](const ShipyardPayload& payload) {
 		const auto& shipyard = payload.shipyard;
 
 		payload.commands.push_back(shipyard->spawn());

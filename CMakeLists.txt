@@ -13,15 +13,15 @@ target_sources(${EXECUTABLE_NAME} PRIVATE
 	include/util.hpp
 	include/weighted_picker.hpp
 	include/behavior_tree.hpp
-	include/unit_manager.hpp
-	include/spot_manager.hpp
-	include/move_manager.hpp
+	include/manager/unit_manager.hpp
+	include/manager/spot_manager.hpp
+	include/manager/move_manager.hpp
 	include/shipyard_ai.hpp
 	include/dropoff_ship_ai.hpp
 	include/ship_ai.hpp
-	src/unit_manager.cpp
-	src/spot_manager.cpp
-	src/move_manager.cpp
+	src/manager/unit_manager.cpp
+	src/manager/spot_manager.cpp
+	src/manager/move_manager.cpp
 	src/shipyard_ai.cpp
 	src/ship_ai.cpp
 	src/dropoff_ship_ai.cpp

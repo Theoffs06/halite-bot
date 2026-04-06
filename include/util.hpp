@@ -5,8 +5,9 @@
 #include "hlt/log.hpp"
 
 #include "include/behavior_tree.hpp"
-#include "include/spot_manager.hpp"
-#include "include/move_manager.hpp"
+#include "include/manager/unit_manager.hpp"
+#include "include/manager//spot_manager.hpp"
+#include "include/manager//move_manager.hpp"
 
 // -- UNIT MANAGER --
 constexpr int MINER_PERCENTAGE = 70;
@@ -15,13 +16,15 @@ constexpr int EXPLORER_PERCENTAGE = 10;
 // -- SHIP --
 
 // Constants for the ship behavior tree nodes.
-constexpr int END_TURN = 350;
-constexpr int INTERESTING_HALITE_CELL = 10;
-constexpr int END_GO_HOME_HALITE = 100;
-constexpr int GO_HOME_HALITE = 500;
+constexpr int ENDGAME_START_TURN = 350;
+constexpr int MIN_HALITE_TO_MINE = 10;
+constexpr int ENDGAME_MIN_HALITE_TO_DEPOSIT = 100;
+constexpr int MIN_HALITE_TO_DEPOSIT = 500;
 constexpr double TARGETED_PENALTY = 900.0;
 constexpr double DISTANCE_PENALTY = 1.5;
-constexpr int INTERESTING_HALITE_DROPOFF = 400;
+
+constexpr int DROPOFF_COST_OFFSET = 4000;
+constexpr int MIN_HALITE_TO_DROPOFF = 400;
 
 // Contains data passed to the ship behavior tree nodes.
 struct ShipPayload {
@@ -33,10 +36,13 @@ struct ShipPayload {
 	MoveManager& moveManager;            // Reference of the MoveManager for managing ship movements and avoiding collisions.
 };
 
+// Globals variables for the ship behavior tree nodes.
+static bool alreadyDropoff = false; // Indicates whether a dropoff has already been built during the current turn.
+
 // -- SHIPYARD --
 
 // Constants for the shipyard behavior tree nodes.
-constexpr int BONUS_COST_SHIP = 0;
+constexpr int SHIP_COST_OFFSET = 0;
 constexpr int MAX_SHIP = 13;
 
 // Contains data passed to the shipyard behavior tree nodes.

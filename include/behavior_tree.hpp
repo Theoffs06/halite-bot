@@ -17,9 +17,9 @@ namespace BehaviorTree {
 	public:
 		// Constructs a node.
 		// parent: Pointer to the parent node (nullptr for root nodes).
-	    Node(Node* parent) : parent(parent) {
+	    Node(Node* parent) : m_parent(parent) {
 	        if (parent != nullptr) {
-	            this->parent->children.push_back(this);
+	            this->m_parent->m_children.push_back(this);
 	        }
 	    }
 
@@ -29,8 +29,8 @@ namespace BehaviorTree {
 		virtual NodeState Evaluate(const T... payload) = 0;
 
 	protected:
-	    std::vector<Node*> children; // Child nodes.
-	    Node* parent;				 // Parent node.
+	    std::vector<Node*> m_children; // Child nodes.
+	    Node* m_parent;				 // Parent node.
 	};
 
 	// Composite node that runs children sequentially.
@@ -44,7 +44,7 @@ namespace BehaviorTree {
 	    Sequencer(Node<T...>* parent) : Node<T...>(parent) {}
 
 	    NodeState Evaluate(const T... payload) override {
-	        for (Node<T...>* child : this->children) {
+	        for (Node<T...>* child : this->m_children) {
 	            NodeState childState = child->Evaluate(payload...);
 
 				if (childState != NodeState::Success) {
@@ -67,7 +67,7 @@ namespace BehaviorTree {
 	    Selector(Node<T...>* parent) : Node<T...>(parent) {}
 
 	    NodeState Evaluate(const T... payload) override {
-	        for (Node<T...>* child : this->children) {
+	        for (Node<T...>* child : this->m_children) {
 	            NodeState childState = child->Evaluate(payload...);
 
 				if (childState != NodeState::Failure) {
@@ -87,19 +87,19 @@ namespace BehaviorTree {
 		// Constructs a Leaf node with a default function (returns Failure).
 		// parent: Pointer to the parent node.
 	    Leaf(Node<T...>* parent) : Node<T...>(parent), 
-			evaluation([](const T...) { return NodeState::Failure; }) {}
+			m_evaluation([](const T...) { return NodeState::Failure; }) {}
 
 		// Constructs a Leaf node with a custom evaluation function.
 		// parent: Pointer to the parent node.
 		// func: Function to execute when the node is evaluated.
 	    Leaf(Node<T...>* parent, std::function<NodeState(const T...)> func) 
-			: Node<T...>(parent), evaluation(func) {}
+			: Node<T...>(parent), m_evaluation(func) {}
 
 	    NodeState Evaluate(const T... payload) override {
-	        return this->evaluation(payload...);
+	        return this->m_evaluation(payload...);
 	    }
 
 	protected:
-	    std::function<NodeState(const T...)> evaluation; // Function executed to evaluate the node.
+	    std::function<NodeState(const T...)> m_evaluation; // Function executed to evaluate the node.
 	};
 } // namespace BehaviorTree

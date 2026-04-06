@@ -10,11 +10,13 @@ namespace DropoffShipAi {
 
 	// --- Behavior Tree Nodes ---
 
+	// Leaf node: Transforms the ship into a dropoff point if it's on a big halite spot.
 	class TransformIntoDropoff : public BehaviorTree::Leaf<ShipPayload> {
 	public:
 		TransformIntoDropoff(BehaviorTree::Node<ShipPayload>* parent);
 	};
 
+	// Leaf node: Checks if the ship is currently on a big halite spot.
 	class IsOnBigHaliteSpot : public BehaviorTree::Leaf<ShipPayload> {
 	public:
 		IsOnBigHaliteSpot(BehaviorTree::Node<ShipPayload>* parent);
