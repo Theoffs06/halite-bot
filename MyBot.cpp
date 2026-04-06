@@ -1,32 +1,29 @@
-#include "include/ship_ai_v2.hpp"
+#include "include/ship_ai.hpp"
 
 int main(int argc, char* argv[]) {
 	hlt::Game game;
     game.ready("PoissonSteve");
 
-    BehaviorTree::Selector<Payload> shipAi = ShipAIV2::GetBehaviorTree();
+	// Get the behavior tree for ship AI.
+    BehaviorTree::Selector<Payload> shipAi = ShipAI::GetBehaviorTree();
 
+	// Main game loop
     while (true) {
+		// Update the game state for the new turn.
         game.update_frame();
 
-        std::shared_ptr<hlt::Player> me = game.me;
+		// Get references to the current player and game map for easier access.
+        const std::shared_ptr<hlt::Player> me = game.me;
         std::unique_ptr<hlt::GameMap>& gameMap = game.game_map;
-
         std::vector<hlt::Command> commandQueue;
 
-        for (const auto& ship_iterator : me->ships) {
-	        std::shared_ptr<hlt::Ship> ship = ship_iterator.second;
+		// Evaluate the behavior tree for each ship and populate the command queue.
+        for (const auto& shipIterator : me->ships) {
+	        const std::shared_ptr<hlt::Ship> ship = shipIterator.second;
             shipAi.Evaluate({ game, commandQueue, ship });
         }
 
-        if (
-            me->halite >= hlt::constants::SHIP_COST
-            && me->ships.size() < 13 
-            && !gameMap->at(me->shipyard)->is_occupied()
-            ) {
-            commandQueue.push_back(me->shipyard->spawn());
-        }
-
+		// Send the command queue to the game engine and end the turn.
         if (!game.end_turn(commandQueue)) {
             break;
         }
