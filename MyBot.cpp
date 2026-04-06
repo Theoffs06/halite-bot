@@ -12,6 +12,7 @@ int main(int argc, char* argv[]) {
     BehaviorTree::Selector<ShipPayload> shipAi = ShipAI::GetBehaviorTree();
 
     SpotManager spotManager;
+    MoveManager moveManager;
 
 	// Main game loop
     while (true) {
@@ -33,6 +34,7 @@ int main(int argc, char* argv[]) {
         		commandQueue, 
         		ship,
                 spotManager,
+				moveManager,
         	});
         }
 

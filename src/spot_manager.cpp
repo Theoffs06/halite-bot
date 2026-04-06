@@ -25,7 +25,7 @@ hlt::Position SpotManager::GetTheBestHaliteSpot(const std::unique_ptr<hlt::GameM
 			const unsigned int distance = gameMap->calculate_distance(ship->position, cell->position);
 			const bool alreadyTargeted = m_currentlyTargetedSpots.contains(y * width + x);
 
-			const double score = cell->halite - (distance * DISTANCE_PENALTY) - (alreadyTargeted ? TARGETED_PENALTY : 0.0);;
+			const double score = cell->halite - (distance * DISTANCE_PENALTY) - (alreadyTargeted ? TARGETED_PENALTY : 0.0);
 			if (score > bestSpotScore || (score == bestSpotScore && distance < bestSpotDistance)) {
 				bestSpotScore = score;
 				bestSpotPosition = cell->position;

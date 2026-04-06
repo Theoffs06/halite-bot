@@ -1,9 +1,12 @@
 #pragma once
 
-#include "spot_manager.hpp"
 #include "hlt/game.hpp"
 #include "hlt/constants.hpp"
 #include "hlt/log.hpp"
+
+#include "include/behavior_tree.hpp"
+#include "include/spot_manager.hpp"
+#include "include/move_manager.hpp"
 
 // -- SHIP --
 
@@ -22,6 +25,7 @@ struct ShipPayload {
     std::shared_ptr<hlt::Ship> ship;     // Pointer to the ship associated with the node.
 
     SpotManager& spotManager;            // Reference of the SpotManager for finding optimal halite spots.
+	MoveManager& moveManager;            // Reference of the MoveManager for managing ship movements and avoiding collisions.
 };
 
 // -- SHIPYARD --

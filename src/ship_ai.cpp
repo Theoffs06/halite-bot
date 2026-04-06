@@ -68,10 +68,9 @@ ShipAI::ShouldDeposit::ShouldDeposit(BehaviorTree::Node<ShipPayload>* parent) : 
 ShipAI::GoDeposit::GoDeposit(BehaviorTree::Node<ShipPayload>* parent) : Leaf(parent) {
 	this->evaluation = [&](const ShipPayload& payload) {
 		const std::unique_ptr<hlt::GameMap>& gameMap = payload.game.game_map;
-		hlt::MapCell* cell = gameMap->at(payload.ship);
 		std::shared_ptr<hlt::Ship> ship = payload.ship;
 
-		hlt::Direction direction = gameMap->naive_navigate(ship, payload.game.me->shipyard->position);
+		hlt::Direction direction = payload.moveManager.GetNextDirection(gameMap, ship, payload.game.me->shipyard->position);
 		direction = UnblockShip(gameMap, direction, ship->position);
 
 		// Check if the ship has enough halite to move. If not, stay still and mark the cell as unsafe.
@@ -147,7 +146,7 @@ ShipAI::MoveToBestHaliteSpot::MoveToBestHaliteSpot(BehaviorTree::Node<ShipPayloa
 		const hlt::Position bestSpotPosition = payload.spotManager.GetTheBestHaliteSpot(gameMap, ship);
 
 		// Get the direction to navigate towards the best halite spot.
-		hlt::Direction direction = gameMap->naive_navigate(ship, bestSpotPosition);
+		hlt::Direction direction = payload.moveManager.GetNextDirection(gameMap, ship, bestSpotPosition);
 		direction = UnblockShip(gameMap, direction, ship->position);
 
 		// Check if the ship has enough halite to move. If not, stay still and mark the cell as unsafe.
