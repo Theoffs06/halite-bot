@@ -6,6 +6,22 @@ BehaviorTree::Selector<ShipPayload> ShipAI::GetBehaviorTree() {
 	// Root node: selects between mining or depositing
 	static BehaviorTree::Selector<ShipPayload> root(nullptr);
 
+	// Subtree: depositing end game behavior (going back to the shipyard to drop off halite when the game is about to end)
+	static BehaviorTree::Sequencer<ShipPayload> depositingEndGameSubtree(&root);
+	static ShouldDeposit shouldDepositEndGame(&depositingEndGameSubtree);
+	static GoDeposit goDepositEndGame(&depositingEndGameSubtree);
+
+	// Subtree: depositing behavior (going back to the shipyard to drop off halite)
+	static BehaviorTree::Sequencer<ShipPayload> depositingSubtree(&root);
+	static ShouldDeposit shouldDeposit(&depositingSubtree);
+	static GoDeposit goDeposit(&depositingSubtree);
+
+	// Subtree: mining behavior (collecting halite)
+	static BehaviorTree::Sequencer<ShipPayload> miningSubtree(&root);
+	static IsNotFull isNotFull(&miningSubtree);
+	static HaliteHere haliteHere(&miningSubtree);
+	static CollectHalite collectHalite(&miningSubtree);
+
 	// Leaf: move to a cool halite spot
 	static MoveToBestHaliteSpot moveToBestHalite(&root);
 
@@ -14,40 +30,137 @@ BehaviorTree::Selector<ShipPayload> ShipAI::GetBehaviorTree() {
 
 // --- Behavior Tree Nodes ---
 
+// -- EndShouldDeposit Node ---
+/* 
+ * This node checks if the game is in the endgame phase and if the ship has enough halite to justify returning to the shipyard to deposit. 
+ * If both conditions are met, it returns Success; otherwise, it returns Failure.
+ */
+ShipAI::EndShouldDeposit::EndShouldDeposit(BehaviorTree::Node<ShipPayload>* parent) : Leaf(parent) {
+	this->evaluation = [&](const ShipPayload& payload) {
+		if (payload.game.turn_number >= END_TURN && payload.ship->halite >= END_GO_HOME_HALITE) {
+			return BehaviorTree::NodeState::Success;
+		}
+
+		return BehaviorTree::NodeState::Failure;
+	};
+}
+
+// --- ShouldDeposit Node ---
+/* 
+ * This node checks if the ship has enough halite to justify returning to the shipyard to deposit. 
+ * If the ship's halite is greater than or equal to the GO_HOME_HALITE threshold, it returns Success; otherwise, it returns Failure.
+ */
+ShipAI::ShouldDeposit::ShouldDeposit(BehaviorTree::Node<ShipPayload>* parent) : Leaf(parent) {
+	this->evaluation = [&](const ShipPayload& payload) {
+		if (payload.ship->halite >= GO_HOME_HALITE) {
+			return BehaviorTree::NodeState::Success;
+		}
+
+		return BehaviorTree::NodeState::Failure;
+	};
+}
+
+// --- GoDeposit Node ---
+/* 
+ * This node commands the ship to move towards the shipyard to deposit halite. 
+ * It uses the game map's naive navigation to find the direction and marks the target cell as unsafe.
+ */
+ShipAI::GoDeposit::GoDeposit(BehaviorTree::Node<ShipPayload>* parent) : Leaf(parent) {
+	this->evaluation = [&](const ShipPayload& payload) {
+		const std::unique_ptr<hlt::GameMap>& gameMap = payload.game.game_map;
+		hlt::MapCell* cell = gameMap->at(payload.ship);
+		std::shared_ptr<hlt::Ship> ship = payload.ship;
+
+		hlt::Direction direction = gameMap->naive_navigate(ship, payload.game.me->shipyard->position);
+		direction = UnblockShip(gameMap, direction, ship->position);
+
+		// Check if the ship has enough halite to move. If not, stay still and mark the cell as unsafe.
+		if (ship->halite < gameMap->at(ship)->halite * (1.0 / hlt::constants::MOVE_COST_RATIO)) {
+			gameMap->at(ship)->mark_unsafe(ship);
+			payload.commands.push_back(ship->stay_still());
+			return BehaviorTree::NodeState::Running;
+		}
+
+		// Mark the target cell as unsafe to prevent other ships from moving into it.
+		gameMap->at(ship->position.directional_offset(direction))->mark_unsafe(ship);
+
+		payload.commands.push_back(ship->move(direction));
+		return BehaviorTree::NodeState::Running;
+	};
+}
+
+// --- HaliteHere Node ---
+/* 
+ * This node checks if there is a significant amount of halite in the current cell. 
+ * If there is, it returns Success; otherwise, it returns Failure.
+ */
+ShipAI::HaliteHere::HaliteHere(BehaviorTree::Node<ShipPayload>* parent) : Leaf(parent) {
+	this->evaluation = [&](const ShipPayload& payload) {
+		if (payload.game.game_map->at(payload.ship)->halite > INTERESTING_HALITE_CELL) {
+			return BehaviorTree::NodeState::Success;
+		}
+
+		return BehaviorTree::NodeState::Failure;
+	};
+}
+
+// --- IsNotFull Node ---
+/* 
+ * This node checks if the ship is not full of halite. 
+ * If the ship is full, it returns Failure; otherwise, it returns Success.
+ */
+ShipAI::IsNotFull::IsNotFull(BehaviorTree::Node<ShipPayload>* parent) : Leaf(parent) {
+	this->evaluation = [&](const ShipPayload& payload) {
+		if (payload.ship->is_full()) {
+			return BehaviorTree::NodeState::Failure;
+		}
+
+		return BehaviorTree::NodeState::Success;
+	};
+}
+
+// --- CollectHalite Node ---
+/* 
+ * This node commands the ship to stay still and collect halite from the current cell. 
+ * It marks the cell as unsafe to prevent other ships from moving into it.
+ */
+ShipAI::CollectHalite::CollectHalite(BehaviorTree::Node<ShipPayload>* parent) : Leaf(parent) {
+	this->evaluation = [&](const ShipPayload& payload) {
+		std::shared_ptr<hlt::Ship> ship = payload.ship;
+
+		payload.game.game_map->at(payload.ship)->mark_unsafe(ship);
+		payload.commands.push_back(ship->stay_still());
+		return BehaviorTree::NodeState::Running;
+	};
+}
+
+// --- Leaf Nodes ---
+
 // --- MoveToBestHalite Node ---
 // This node would contain logic to move the ship towards the best halite on the map.
 ShipAI::MoveToBestHaliteSpot::MoveToBestHaliteSpot(BehaviorTree::Node<ShipPayload>* parent) : Leaf(parent) {
 	this->evaluation = [&](const ShipPayload& payload) {
-		const auto& gameMap = payload.game.game_map;
-		const auto& ship = payload.ship;
+		const std::unique_ptr<hlt::GameMap>& gameMap = payload.game.game_map;
+		std::shared_ptr<hlt::Ship> ship = payload.ship;
 
-		hlt::Position bestPosition = payload.ship->position;
-		double bestScore = -std::numeric_limits<double>::infinity();
-		unsigned int bestDistance = std::numeric_limits<unsigned int>::max();
+		// Find the best halite spot on the map for this ship.
+		const hlt::Position bestSpotPosition = payload.spotManager.GetTheBestHaliteSpot(gameMap, ship);
 
-		for (unsigned int y = 0; y < gameMap->height; ++y) {
-			for (unsigned int x = 0; x < gameMap->width; ++x) {
-				const auto& cell = gameMap->at({
-					(int) x, 
-					(int) y
-				});
+		// Get the direction to navigate towards the best halite spot.
+		hlt::Direction direction = gameMap->naive_navigate(ship, bestSpotPosition);
+		direction = UnblockShip(gameMap, direction, ship->position);
 
-				if (cell->has_structure()) continue;
-
-				const unsigned int distance = gameMap->calculate_distance(ship->position, cell->position);
-				const double score = cell->halite - (distance * DISTANCE_PENALTY);
-
-				if (score > bestScore || (score == bestScore && distance < bestDistance)) {
-					bestScore = score;
-					bestPosition = cell->position;
-					bestDistance = distance;
-				}
-			}
+		// Check if the ship has enough halite to move. If not, stay still and mark the cell as unsafe.
+		if (ship->halite < gameMap->at(ship)->halite * (1.0 / hlt::constants::MOVE_COST_RATIO)) {
+			gameMap->at(ship)->mark_unsafe(ship);
+			payload.commands.push_back(ship->stay_still());
+			return BehaviorTree::NodeState::Running;
 		}
 
-		hlt::Direction direction = gameMap->naive_navigate(ship, bestPosition);
-		direction = UnblockShip(gameMap, direction, bestPosition);
+		// Mark the target cell as unsafe to prevent other ships from moving into it.
+		gameMap->at(ship->position.directional_offset(direction))->mark_unsafe(ship);
 
+		// Command the ship to move in the chosen direction.
 		payload.commands.push_back(ship->move(direction));
 		return BehaviorTree::NodeState::Running;
 	};
@@ -55,22 +168,25 @@ ShipAI::MoveToBestHaliteSpot::MoveToBestHaliteSpot(BehaviorTree::Node<ShipPayloa
 
 // --- Utility Functions ---
 
-// This function checks if the ship is blocked in the given direction and, if so, tries to find an alternative direction to move towards the goal.
-hlt::Direction ShipAI::UnblockShip(const std::unique_ptr<hlt::GameMap>& gameMap, const hlt::Direction direction, const hlt::Position& goal){
+/* 
+ * This function checks if the ship is blocked in the given direction and, 
+ * if so, tries to find an alternative direction to move towards the goal. 
+ */
+hlt::Direction ShipAI::UnblockShip(const std::unique_ptr<hlt::GameMap>& gameMap, const hlt::Direction direction, const hlt::Position& shipPos){
 	if (direction == hlt::Direction::STILL) {
-		if (gameMap->at({ goal.x + 1, goal.y })->is_empty()) {
+		if (gameMap->at({ shipPos.x + 1, shipPos.y })->is_empty()) {
 			return hlt::Direction::EAST;
 		}
 
-		if (gameMap->at({ goal.x - 1, goal.y })->is_empty()) {
+		if (gameMap->at({ shipPos.x - 1, shipPos.y })->is_empty()) {
 			return hlt::Direction::WEST;
 		}
 
-		if (gameMap->at({ goal.x, goal.y + 1 })->is_empty()) {
+		if (gameMap->at({ shipPos.x, shipPos.y + 1 })->is_empty()) {
 			return hlt::Direction::SOUTH;
 		}
 
-		if (gameMap->at({ goal.x, goal.y - 1 })->is_empty()) {
+		if (gameMap->at({ shipPos.x, shipPos.y - 1 })->is_empty()) {
 			return hlt::Direction::NORTH;
 		}
 	}

@@ -11,10 +11,14 @@ int main(int argc, char* argv[]) {
 	// Get the behavior tree for ship AI.
     BehaviorTree::Selector<ShipPayload> shipAi = ShipAI::GetBehaviorTree();
 
+    SpotManager spotManager;
+
 	// Main game loop
     while (true) {
 		// Update the game state for the new turn.
         game.update_frame();
+
+        spotManager.ResetObjectives();
 
 		// Get references to the current player and game map for easier access.
         const std::shared_ptr<hlt::Player> me = game.me;
@@ -24,7 +28,12 @@ int main(int argc, char* argv[]) {
 		// Evaluate the behavior tree for each ship and populate the command queue.
         for (const auto& shipIterator : me->ships) {
 	        const std::shared_ptr<hlt::Ship> ship = shipIterator.second;
-        	shipAi.Evaluate({ game, commandQueue, ship });
+        	shipAi.Evaluate({ 
+                game, 
+        		commandQueue, 
+        		ship,
+                spotManager,
+        	});
         }
 
 		// Evaluate the behavior tree for the shipyard and populate the command queue.

@@ -12,8 +12,10 @@ target_compile_features(${EXECUTABLE_NAME} PRIVATE cxx_std_20)
 target_sources(${EXECUTABLE_NAME} PRIVATE 
 	include/util.hpp
 	include/behavior_tree.hpp
+	include/spot_manager.hpp
 	include/shipyard_ai.hpp
 	include/ship_ai.hpp
+	src/spot_manager.cpp
 	src/shipyard_ai.cpp
 	src/ship_ai.cpp
 	MyBot.cpp
