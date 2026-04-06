@@ -4,7 +4,18 @@
 #include "include/behavior_tree.hpp"
 
 namespace ShipAI {
-	// Constructs and returns the behavior tree for ship AI.
-	// The tree is static to avoid rebuilding it every time the function is called.
-	BehaviorTree::Selector<Payload> GetBehaviorTree();
+	// --- Behavior Tree Construction ---
+
+	BehaviorTree::Selector<ShipPayload> GetBehaviorTree();
+
+	// --- Behavior Tree Nodes ---
+
+	class MoveToBestHaliteSpot : public BehaviorTree::Leaf<ShipPayload> {
+	public:
+		MoveToBestHaliteSpot(BehaviorTree::Node<ShipPayload>* parent);
+	};
+
+	// --- Utility Functions ---
+
+	hlt::Direction UnblockShip(const std::unique_ptr<hlt::GameMap>& gameMap, const hlt::Direction direction, const hlt::Position& goal);
 } // namespace ShipAI

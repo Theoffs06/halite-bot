@@ -1,11 +1,15 @@
+#include "include/shipyard_ai.hpp"
 #include "include/ship_ai.hpp"
 
 int main(int argc, char* argv[]) {
 	hlt::Game game;
     game.ready("PoissonSteve");
 
+	// Get the behavior tree for shipyard AI.
+	BehaviorTree::Selector<ShipyardPayload> shipyardAi = ShipyardAI::GetBehaviorTree();
+
 	// Get the behavior tree for ship AI.
-    BehaviorTree::Selector<Payload> shipAi = ShipAI::GetBehaviorTree();
+    BehaviorTree::Selector<ShipPayload> shipAi = ShipAI::GetBehaviorTree();
 
 	// Main game loop
     while (true) {
@@ -20,8 +24,11 @@ int main(int argc, char* argv[]) {
 		// Evaluate the behavior tree for each ship and populate the command queue.
         for (const auto& shipIterator : me->ships) {
 	        const std::shared_ptr<hlt::Ship> ship = shipIterator.second;
-            shipAi.Evaluate({ game, commandQueue, ship });
+        	shipAi.Evaluate({ game, commandQueue, ship });
         }
+
+		// Evaluate the behavior tree for the shipyard and populate the command queue.
+        shipyardAi.Evaluate({game,commandQueue,me->shipyard});
 
 		// Send the command queue to the game engine and end the turn.
         if (!game.end_turn(commandQueue)) {

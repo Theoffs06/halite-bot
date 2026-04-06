@@ -12,7 +12,9 @@ target_compile_features(${EXECUTABLE_NAME} PRIVATE cxx_std_20)
 target_sources(${EXECUTABLE_NAME} PRIVATE 
 	include/util.hpp
 	include/behavior_tree.hpp
+	include/shipyard_ai.hpp
 	include/ship_ai.hpp
+	src/shipyard_ai.cpp
 	src/ship_ai.cpp
 	MyBot.cpp
 )
@@ -64,5 +66,5 @@ foreach(tgt ${EXECUTABLE_NAME} ${LIB_NAME})
 endforeach()
 
 if (MINGW)
-    target_link_libraries(${EXECUTABLE_NAME} -static)
+    goal_link_libraries(${EXECUTABLE_NAME} -static)
 endif()
